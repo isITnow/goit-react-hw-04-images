@@ -25,7 +25,9 @@ export const ImageGallery = ({ query, page, onLoadMore }) => {
           return;
         }
 
-        setImages(page === 1 ? data.hits : [...images, ...data.hits]);
+        setImages(prevImg =>
+          page === 1 ? data.hits : [...prevImg, ...data.hits]
+        );
       })
       .catch(error => toast.error(error.message))
       .finally(() => setIsLoading(false));
