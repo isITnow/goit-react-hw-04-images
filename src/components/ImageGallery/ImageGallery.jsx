@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { fetchImages } from 'services/fetchImages';
 import { ImageGalleryItem } from '../ImageGalleryItem/ImageGalleryItem';
 import { toast } from 'react-toastify';
@@ -7,64 +7,52 @@ import { Button } from 'components/Button';
 import s from './ImageGallery.module.css';
 import PropTypes from 'prop-types';
 
-export class ImageGallery extends Component {
-  static propTypes = {
-    query: PropTypes.string.isRequired,
-    page: PropTypes.number.isRequired,
-    onLoadMore: PropTypes.func.isRequired,
-  };
+export const ImageGallery = ({ query, page, onLoadMore }) => {
+  const [images, setImages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  state = {
-    images: [],
-    isLoading: false,
-  };
-
-  componentDidUpdate(prevProps, prevState) {
-    const { query, page } = this.props;
-    const { images } = this.state;
-    const isNewQuery = prevProps.query !== query;
-    const isNewPage = prevProps.page !== page;
-    if (isNewQuery || isNewPage) {
-      this.setState({ isLoading: true });
-
-      fetchImages(query, page)
-        .then(data => {
-          if (!data.hits.length) {
-            this.setState({ images: [], isLoading: false });
-            toast.warn(`No results matching "${query}"`);
-            return;
-          }
-
-          this.setState({
-            images: page === 1 ? data.hits : [...images, ...data.hits],
-            isLoading: false,
-          });
-        })
-        .catch(error => console.log(error.message));
+  useEffect(() => {
+    if (query === '') {
+      return;
     }
-  }
+    setIsLoading(true);
+    fetchImages(query, page)
+      .then(data => {
+        if (!data.hits.length) {
+          setImages([]);
+          setIsLoading(false);
+          toast.warn(`No results matching "${query}"`);
+          return;
+        }
 
-  render() {
-    const { images, isLoading } = this.state;
-    const { onLoadMore } = this.props;
+        setImages(page === 1 ? data.hits : [...images, ...data.hits]);
+      })
+      .catch(error => toast.error(error.message))
+      .finally(() => setIsLoading(false));
+  }, [query, page]);
 
-    return (
-      <>
-        <ul className={s.ImageGallery}>
-          {images.map(({ id, webformatURL, largeImageURL, tags }) => (
-            <ImageGalleryItem
-              key={id}
-              imgUrl={webformatURL}
-              largeImgUrl={largeImageURL}
-              tags={tags}
-            />
-          ))}
-        </ul>
-        {isLoading && <Loader />}
-        {images.length > 0 && (
-          <Button children={'Load more'} onClick={onLoadMore} />
-        )}
-      </>
-    );
-  }
-}
+  return (
+    <>
+      <ul className={s.ImageGallery}>
+        {images.map(({ id, webformatURL, largeImageURL, tags }) => (
+          <ImageGalleryItem
+            key={id}
+            imgUrl={webformatURL}
+            largeImgUrl={largeImageURL}
+            tags={tags}
+          />
+        ))}
+      </ul>
+      {isLoading && <Loader />}
+      {images.length > 0 && (
+        <Button children={'Load more'} onClick={onLoadMore} />
+      )}
+    </>
+  );
+};
+
+ImageGallery.propTypes = {
+  query: PropTypes.string.isRequired,
+  page: PropTypes.number.isRequired,
+  onLoadMore: PropTypes.func.isRequired,
+};
